@@ -7,13 +7,14 @@ import { runInNewContext } from "node:vm";
 // No duplicated application logic and no browser/dependency installation needed.
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const script = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
-function page(fetch) {
+function page(fetch, catalog = false) {
   let submit;
   let deadline;
   const nodes = {
     form: { addEventListener(type, handler) { assert.equal(type, "submit"); submit = handler; } },
     "#message": { value: "hello", focus() { this.focused = true; } },
     "#result": { textContent: "" }, button: { disabled: false },
+    "#catalog-mode": { checked: catalog },
   };
   runInNewContext(script, {
     document: { querySelector: selector => nodes[selector] }, fetch, AbortController,
@@ -74,4 +75,12 @@ test("API input rejection is shown as an input error", async () => {
   const ui = page(async () => reply({ status: "invalid_input" }, 400));
   await ui.submit();
   assert.equal(ui.nodes["#result"].textContent, "Введите текст заявки.");
+});
+test("catalog checkbox opts into the demo and keeps source labels visible", async () => {
+  const ui = page(async (_, options) => {
+    assert.equal(JSON.parse(options.body).mode, "catalog");
+    return reply({ ...ready, draft: "KeyOne K1: 4900 ₽. Источники: [keyboard-k1]" });
+  }, true);
+  await ui.submit();
+  assert.match(ui.nodes["#result"].textContent, /keyboard-k1/);
 });
