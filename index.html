@@ -5,31 +5,131 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Входящие заявки</title>
   <style>
-    body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font: 1rem/1.5 system-ui, sans-serif; }
-    textarea { box-sizing: border-box; display: block; width: 100%; margin: .5rem 0; padding: .5rem; font: inherit; }
-    button { padding: .4rem .8rem; font: inherit; }
-    pre { white-space: pre-wrap; }
-    .hint { color: #555; font-size: .9rem; }
-    details { border: 1px solid #ccc; border-radius: .4rem; padding: .7rem; margin: 1rem 0; }
-    #examples button { margin: .25rem; font-size: .9rem; }
+    :root { color-scheme: light; --ink: #24272c; --muted: #626871; --line: #e4e6e9; --paper: #fff; --bg: #f7f8fa; --orange: #bd480b; --soft-orange: #fff2e9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--bg); font: 15px/1.6 "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    button, textarea, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
+    button, textarea, summary { transition: background .15s, border-color .15s, box-shadow .15s; }
+    :focus-visible { outline: 3px solid #b64308; outline-offset: 4px; }
+    .topbar { background: var(--paper); border-bottom: 1px solid var(--line); }
+    .topbar-inner { max-width: 1200px; margin: auto; padding: 20px 32px; display: flex; align-items: center; gap: 28px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; letter-spacing: -.8px; }
+    .brand-mark { display: grid; place-items: center; width: 32px; height: 32px; background: var(--orange); border-radius: 9px; color: white; font-size: 22px; font-weight: 500; }
+    .breadcrumb { padding-left: 28px; border-left: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    .demo-badge { margin-left: auto; border: 1px solid var(--line); padding: 4px 11px; border-radius: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    main { max-width: 1200px; margin: 0 auto; padding: 38px 32px 24px; }
+    .page-heading { margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 1.7px; color: var(--orange); text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); line-height: 1.25; font-weight: 650; letter-spacing: -1px; }
+    .page-heading > p:last-child { margin: 10px 0 0; color: var(--muted); }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: stretch; }
+    .panel { min-width: 0; border: 1px solid var(--line); background: var(--paper); border-radius: 12px; box-shadow: 0 2px 3px #22222202; }
+    .panel-header { display: flex; align-items: center; gap: 10px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .step { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 12px; }
+    h2 { margin: 0; font-size: 15px; font-weight: 650; }
+    .panel-body { padding: 24px; }
+    .field-label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
+    textarea { display: block; width: 100%; min-height: 164px; padding: 14px 16px; resize: vertical; border: 1px solid #cdd1d7; border-radius: 8px; background: #fcfcfd; color: var(--ink); line-height: 1.65; }
+    textarea::placeholder { color: #777d86; }
+    textarea:focus { border-color: var(--orange); background: var(--paper); box-shadow: 0 0 0 3px #bd480b12; outline: none; }
+    .mode-row { display: flex; align-items: flex-start; gap: 10px; margin: 19px 0 0; }
+    .mode-row input { margin: 4px 0 0; width: 17px; height: 17px; accent-color: var(--orange); flex-shrink: 0; }
+    .mode-row label { font-size: 13px; font-weight: 600; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .mode-row .hint { margin: 3px 0 0; }
+    .submit-button { display: flex; justify-content: center; align-items: center; gap: 14px; width: 100%; min-height: 46px; margin-top: 23px; border: 1px solid var(--orange); border-radius: 8px; background: var(--orange); color: #fff; font-size: 14px; font-weight: 600; }
+    .submit-button:hover:not(:disabled) { background: #a83c07; border-color: #a83c07; }
+    .submit-button svg { width: 17px; height: 17px; }
+    .examples { border-top: 1px solid var(--line); margin: 24px -24px -24px; padding: 19px 24px 23px; background: #fdfdfd; border-radius: 0 0 12px 12px; }
+    .examples-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 10px; }
+    .examples-heading p { margin: 0; font-size: 12px; color: var(--muted); }
+    .examples-heading .examples-title { font-weight: 600; color: var(--ink); }
+    .example-list { display: flex; flex-wrap: wrap; gap: 7px; }
+    .example-list button { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: #555b64; font-size: 12px; text-align: left; }
+    .example-list button:hover { border-color: #d7a080; color: var(--orange); background: var(--soft-orange); }
+    .example-list button:last-child { border-style: dashed; }
+    .result-panel { display: flex; flex-direction: column; }
+    .result-status { margin-left: auto; color: var(--muted); background: #f2f3f5; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 500; }
+    .result-body { flex: 1; display: flex; flex-direction: column; padding: 24px; }
+    #result { margin: 0; font: inherit; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #result:empty { display: none; }
+    .empty-state { display: none; flex: 1; flex-direction: column; justify-content: center; align-items: center; padding: 46px 18px 68px; text-align: center; }
+    #result:empty + .empty-state { display: flex; }
+    .empty-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 18px; border-radius: 16px; background: var(--soft-orange); color: var(--orange); }
+    .empty-icon svg { width: 26px; height: 26px; }
+    .empty-state h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+    .empty-state p { max-width: 280px; margin: 0; color: var(--muted); font-size: 13px; }
+    .result-footer { padding: 14px 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .result-footer svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .result-panel:has([data-state="ready"]) .result-status { background: var(--soft-orange); color: var(--orange); }
+    .result-panel:has([data-state="manual"]) .result-status, .result-panel:has([data-state="invalid"]) .result-status { color: #963d16; background: #fff0e5; }
+    #result[data-state="manual"], #result[data-state="invalid"] { border-left: 3px solid var(--orange); padding: 0 0 0 16px; }
+    #result[data-state="loading"] { color: var(--muted); }
+    details { margin-top: 22px; border: 1px solid var(--line); background: var(--paper); border-radius: 10px; }
+    summary { display: flex; align-items: center; gap: 12px; padding: 18px 24px; cursor: pointer; list-style: none; min-height: 60px; }
+    summary::-webkit-details-marker { display: none; }
+    summary:hover { background: #fcfcfd; border-radius: 10px; }
+    summary svg { width: 19px; height: 19px; color: var(--muted); flex-shrink: 0; }
+    .catalog-title { font-size: 13px; font-weight: 600; }
+    .catalog-subtitle { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .chevron { color: var(--muted); margin-left: 8px; transition: transform .15s; }
+    details[open] .chevron { transform: rotate(180deg); }
+    #catalog-content { border-top: 1px solid var(--line); padding: 24px; margin: 0; font: inherit; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .page-footer { display: flex; justify-content: space-between; gap: 12px; padding: 21px 2px 0; font-size: 11px; color: var(--muted); }
+    @media (max-width: 760px) {
+      .topbar-inner { padding: 16px 20px; gap: 14px; }
+      .breadcrumb { display: none; }
+      main { padding: 27px 20px 20px; }
+      .workspace { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .panel-header { padding: 17px 20px; }
+      .panel-body, .result-body { padding: 20px; }
+      .examples { margin: 22px -20px -20px; padding: 18px 20px 20px; }
+      .examples-heading { display: block; }
+      .examples-heading p + p { margin-top: 2px; }
+      .example-list button { min-height: 44px; }
+      .empty-state { padding: 28px 0 36px; }
+      summary { padding: 17px 20px; }
+      .catalog-subtitle { display: none; }
+      .chevron { margin-left: auto; }
+      #catalog-content { padding: 20px; }
+      .page-footer { flex-direction: column; gap: 3px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
   </style>
 </head>
 <body>
-  <h1>Входящие заявки</h1>
-  <p>Демо магазина техники. Все товары, цены и условия вымышлены.</p>
-  <form>
-    <label for="message">Текст заявки</label>
-    <textarea id="message" rows="4"></textarea>
-    <p><label><input id="catalog-mode" type="checkbox" checked> Использовать учебный каталог</label></p>
-    <p class="hint">Поиск по локальной базе и ответ по шаблону, без внешней AI-модели. Снимите флажок для исходного имитатора.</p>
-    <button type="submit">Разобрать заявку</button>
-  </form>
-  <details id="catalog">
-    <summary>Товары и условия для проверки</summary>
-    <pre id="catalog-content">Раскройте раздел, чтобы загрузить каталог.</pre>
-  </details>
-  <div id="examples" aria-label="Примеры заявок">
-    <p>Выберите пример, затем нажмите «Разобрать заявку»:</p>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">n</span>neowise</div>
+      <span class="breadcrumb">Помощник менеджера</span>
+      <span class="demo-badge">Учебное демо</span>
+    </div>
+  </header>
+  <main>
+    <div class="page-heading">
+      <p class="eyebrow">Рабочее пространство</p>
+      <h1>Входящие заявки</h1>
+      <p>Разберите обращение и подготовьте ответ на основе каталога.</p>
+    </div>
+    <div class="workspace">
+      <section class="panel" aria-labelledby="request-heading">
+        <div class="panel-header"><span class="step" aria-hidden="true">01</span><h2 id="request-heading">Заявка клиента</h2></div>
+        <div class="panel-body">
+          <form>
+            <label class="field-label" for="message">Текст заявки</label>
+            <textarea id="message" rows="5" placeholder="Например: сколько стоит KeyOne K1 и когда сможете доставить в Москву?"></textarea>
+            <div class="mode-row">
+              <input id="catalog-mode" type="checkbox" checked aria-describedby="mode-hint">
+              <div><label for="catalog-mode">Использовать учебный каталог</label>
+              <p class="hint" id="mode-hint">Ответы по товарам и условиям магазина. Без флажка — обычный имитатор.</p></div>
+            </div>
+            <button class="submit-button" type="submit">Разобрать заявку <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
+          </form>
+          <div class="examples" id="examples" aria-label="Примеры заявок">
+            <div class="examples-heading"><p class="examples-title">Попробуйте на примере</p><p>Нажмите, чтобы подставить текст</p></div>
+            <div class="example-list">
     <button type="button" data-text="Сколько стоит клавиатура KeyOne K1 и есть ли она в наличии?">Цена клавиатуры</button>
     <button type="button" data-text="Сколько стоит доставка мыши Swift M2 в Москву?">Доставка мыши</button>
     <button type="button" data-text="Есть ли гарнитура Clear H3? Когда поступит?">Товара нет в наличии</button>
@@ -37,19 +137,48 @@
     <button type="button" data-text="Можно оплатить KeyOne K1 по счёту?">Оплата по счёту</button>
     <button type="button" data-text="Сколько стоит монитор Ultra X9?">Товара нет в базе</button>
     <button type="button" data-text="[timeout] Сколько стоит KeyOne K1?">Сбой AI</button>
-  </div>
-  <pre id="result" aria-live="polite"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="panel result-panel" aria-labelledby="result-heading">
+        <div class="panel-header"><span class="step" aria-hidden="true">02</span><h2 id="result-heading">Результат разбора</h2><span class="result-status" id="result-status">Ожидает заявку</span></div>
+        <div class="result-body">
+          <pre id="result" aria-live="polite" aria-atomic="true"></pre>
+          <div class="empty-state">
+            <div class="empty-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 2v-10a9 9 0 0 1 18 0Z"/><path d="M7 9h8M7 13h5"/></svg></div>
+            <h3>Здесь появится черновик</h3>
+            <p>Введите заявку или выберите пример. Подготовим тему и основу ответа.</p>
+          </div>
+        </div>
+        <div class="result-footer"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 8 3v5c0 5-8 10-8 10S4 16 4 11V6Z"/><path d="m8 12 3 3 5-6"/></svg>Проверьте ответ перед отправкой клиенту</div>
+      </section>
+    </div>
+    <details id="catalog">
+      <summary><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 5v9l9 5 9-5V8M12 13v9"/></svg><span class="catalog-title">Товары и условия для проверки</span><span class="catalog-subtitle">4 товара · доставка · оплата</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+      <pre id="catalog-content">Раскройте раздел, чтобы загрузить каталог.</pre>
+    </details>
+    <footer class="page-footer"><span>Все товары, цены и условия вымышлены.</span><span>Локальная база · ответы по шаблону · без внешней AI-модели</span></footer>
+  </main>
   <script type="module">
     const form = document.querySelector("form");
     const result = document.querySelector("#result");
     const message = document.querySelector("#message");
     const button = document.querySelector("button");
     const catalogMode = document.querySelector("#catalog-mode");
+    const statusLabel = document.querySelector("#result-status");
+    const stateLabels = { empty: "Ожидает заявку", loading: "Анализируем…", ready: "Готово к проверке", manual: "Ручной разбор", invalid: "Нужен текст" };
+    function showResult(text, state = "empty") {
+      result.textContent = text;
+      if (result.dataset) result.dataset.state = state;
+      result.setAttribute?.("aria-busy", String(state === "loading"));
+      if (statusLabel) statusLabel.textContent = stateLabels[state];
+    }
     document.querySelector("#examples")?.addEventListener("click", event => {
       const example = event.target.closest("button[data-text]");
       if (example && !button.disabled) {
         message.value = example.dataset.text;
-        result.textContent = "";
+        showResult("");
         message.focus();
       }
     });
@@ -73,15 +202,15 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (busy) return;
-      result.textContent = "";
+      showResult("");
       if (!message.value.trim()) {
-        result.textContent = "Введите текст заявки.";
+        showResult("Введите текст заявки.", "invalid");
         message.focus();
         return;
       }
       busy = true;
       button.disabled = true;
-      result.textContent = "Анализируем заявку…";
+      showResult("Анализируем заявку…", "loading");
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
       try {
@@ -93,16 +222,16 @@
         });
         const data = await reply.json();
         if (reply.status === 400 && data?.status === "invalid_input") {
-          result.textContent = "Введите текст заявки.";
+          showResult("Введите текст заявки.", "invalid");
         } else if (reply.ok && data?.status === "ready"
           && Object.hasOwn(topics, data.topic)
           && typeof data.draft === "string" && data.draft.trim()) {
-          result.textContent = `Тема: ${topics[data.topic]}\n\nЧерновик ответа:\n${data.draft}\n\nПроверьте текст перед отправкой клиенту.`;
+          showResult(`Тема: ${topics[data.topic]}\n\nЧерновик ответа:\n${data.draft}`, "ready");
         } else {
-          result.textContent = manualReview;
+          showResult(manualReview, "manual");
         }
       } catch {
-        result.textContent = manualReview;
+        showResult(manualReview, "manual");
       } finally {
         clearTimeout(timer);
         busy = false;
