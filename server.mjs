@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { classify } from "./mock-ai.mjs";
 import { pathToFileURL } from "node:url";
+import { classifyCatalog, knowledge } from "./catalog-ai.mjs";
 
 const html = await readFile(new URL("./index.html", import.meta.url));
 
@@ -22,7 +23,10 @@ async function handleTriage(request, response) {
   if (typeof input?.text !== "string" || !input.text.trim()) {
     return json(response, 400, { status: "invalid_input" });
   }
-  return json(response, 200, await triage(input.text));
+  if (input.mode !== undefined && input.mode !== "catalog") {
+    return json(response, 400, { status: "invalid_input" });
+  }
+  return json(response, 200, await triage(input.text, input.mode === "catalog" ? classifyCatalog : classify));
 }
 
 // Keep provider failures and untrusted model output behind one boundary.
@@ -54,6 +58,9 @@ export async function triage(text, provider = classify) {
 
 export function createApp() {
   return createServer(async (request, response) => {
+    if (request.method === "GET" && request.url === "/api/catalog") {
+      return json(response, 200, knowledge);
+    }
     if (request.method === "GET" && request.url === "/") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(html);

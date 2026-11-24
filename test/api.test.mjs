@@ -77,3 +77,23 @@ test("page and unknown routes", async () => {
   assert.equal(missing.status, 404);
   assert.deepEqual(await missing.json(), { status: "not_found" });
 });
+test("catalog mode is opt-in and preserves the API response shape", async () => {
+  const result = await post(JSON.stringify({ text: "Цена K1", mode: "catalog" }));
+  assert.equal(result.status, 200);
+  assert.equal(result.body.status, "ready");
+  assert.match(result.body.draft, /4900 ₽/);
+  assert.deepEqual(Object.keys(result.body).sort(), ["draft", "status", "topic"]);
+  assert.equal((await post(JSON.stringify({ text: "Цена K1" }))).body.draft, "Спасибо за обращение. Уточним детали заявки.");
+});
+test("unknown mode is rejected", async () => {
+  assert.deepEqual(await post(JSON.stringify({ text: "Цена K1", mode: "live-llm" })), {
+    status: 400, body: { status: "invalid_input" },
+  });
+});
+test("catalog endpoint exposes labeled educational data", async () => {
+  const response = await fetch(`${base}/api/catalog`);
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.products.length, 4);
+  assert.match(data.notice, /Вымышленный каталог/);
+});

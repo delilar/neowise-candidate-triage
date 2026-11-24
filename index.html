@@ -9,21 +9,64 @@
     textarea { box-sizing: border-box; display: block; width: 100%; margin: .5rem 0; padding: .5rem; font: inherit; }
     button { padding: .4rem .8rem; font: inherit; }
     pre { white-space: pre-wrap; }
+    .hint { color: #555; font-size: .9rem; }
+    details { border: 1px solid #ccc; border-radius: .4rem; padding: .7rem; margin: 1rem 0; }
+    #examples button { margin: .25rem; font-size: .9rem; }
   </style>
 </head>
 <body>
   <h1>Входящие заявки</h1>
+  <p>Демо магазина техники. Все товары, цены и условия вымышлены.</p>
   <form>
     <label for="message">Текст заявки</label>
     <textarea id="message" rows="4"></textarea>
+    <p><label><input id="catalog-mode" type="checkbox" checked> Использовать учебный каталог</label></p>
+    <p class="hint">Поиск по локальной базе и ответ по шаблону, без внешней AI-модели. Снимите флажок для исходного имитатора.</p>
     <button type="submit">Разобрать заявку</button>
   </form>
+  <details id="catalog">
+    <summary>Товары и условия для проверки</summary>
+    <pre id="catalog-content">Раскройте раздел, чтобы загрузить каталог.</pre>
+  </details>
+  <div id="examples" aria-label="Примеры заявок">
+    <p>Выберите пример, затем нажмите «Разобрать заявку»:</p>
+    <button type="button" data-text="Сколько стоит клавиатура KeyOne K1 и есть ли она в наличии?">Цена клавиатуры</button>
+    <button type="button" data-text="Сколько стоит доставка мыши Swift M2 в Москву?">Доставка мыши</button>
+    <button type="button" data-text="Есть ли гарнитура Clear H3? Когда поступит?">Товара нет в наличии</button>
+    <button type="button" data-text="Подойдёт ли хаб Dock D4 к моему ноутбуку?">Совместимость хаба</button>
+    <button type="button" data-text="Можно оплатить KeyOne K1 по счёту?">Оплата по счёту</button>
+    <button type="button" data-text="Сколько стоит монитор Ultra X9?">Товара нет в базе</button>
+    <button type="button" data-text="[timeout] Сколько стоит KeyOne K1?">Сбой AI</button>
+  </div>
   <pre id="result" aria-live="polite"></pre>
   <script type="module">
     const form = document.querySelector("form");
     const result = document.querySelector("#result");
     const message = document.querySelector("#message");
     const button = document.querySelector("button");
+    const catalogMode = document.querySelector("#catalog-mode");
+    document.querySelector("#examples")?.addEventListener("click", event => {
+      const example = event.target.closest("button[data-text]");
+      if (example && !button.disabled) {
+        message.value = example.dataset.text;
+        result.textContent = "";
+        message.focus();
+      }
+    });
+    document.querySelector("#catalog")?.addEventListener("toggle", async event => {
+      if (!event.target.open) return;
+      const content = document.querySelector("#catalog-content");
+      try {
+        const reply = await fetch("/api/catalog");
+        if (!reply.ok) throw new Error("Catalog unavailable");
+        const data = await reply.json();
+        content.textContent = [data.notice, ...data.products.map(product =>
+          `${product.name} — ${product.priceRub} ₽; остаток: ${product.stock} шт.\n${product.facts.join(". ")}`),
+          data.delivery.name, ...data.delivery.facts, data.payment.name, ...data.payment.facts].join("\n\n");
+      } catch {
+        content.textContent = "Не удалось загрузить каталог. Проверьте, запущен ли сервер, и раскройте раздел ещё раз.";
+      }
+    });
     const topics = { delivery: "Доставка", pricing: "Стоимость", other: "Другое" };
     const manualReview = "Нужен ручной разбор: автоматический анализ недоступен. Прочитайте заявку и подготовьте ответ самостоятельно.";
     let busy = false;
@@ -45,7 +88,7 @@
         const reply = await fetch("/api/triage", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: message.value }),
+          body: JSON.stringify({ text: message.value, ...(catalogMode?.checked ? { mode: "catalog" } : {}) }),
           signal: controller.signal,
         });
         const data = await reply.json();
